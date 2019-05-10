@@ -47,6 +47,12 @@ void chessboard::printboard() {
 }
 void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	loc.x = x; loc.y = y;
+	if (board[fromY][fromX] == 'p' && fromY == 1 && y == 0) {
+		loc.piece = 'q';
+	}
+	else if (board[fromY][fromX] == 'P' && fromY == 6 && y == 7){
+		loc.piece == 'Q';
+	}
 	loc.piece = board[fromY][fromX];
 	loc.fromX = fromX;
 	loc.fromY = fromY;
@@ -90,7 +96,6 @@ void chessboard::possibleMoves(char side) {
 			if (isupper(board[y][x]) && side == 'W') { // hvit
 				if (board[y][x] == 'P') { // hvit bonde
 					if (board[y + 1][x] == '0') { // bonde 1 fram
-						if (y == 6) { board[y][x] = 'Q'; }
 						addloc(x, y + 1, x, y);
 						if (y == 1 && board[y + 2][x] == '0') { // bonde 2 fram
 							addloc(x, y + 2, x, y);
