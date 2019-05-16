@@ -15,13 +15,13 @@ class node { // subtracts depth as it goes deeper. eliminates bad ones?
 class chessboard { 
 private:
 	char board[8][8] = { {'R','N','B','K','Q','B','N','R'},
-						 {'P','P','0','0','0','0','P','P'},
+						 {'P','P','P','P','P','P','P','P'},
 						 {'0','0','0','0','0','0','0','0'},
 						 {'0','0','0','0','0','0','0','0'},
 						 {'0','0','0','0','0','0','0','0'},
 						 {'0','0','0','0','0','0','0','0'},
-						 {'p','p','p','p','p','p','p','p'},
-						 {'r','n','b','q','k','b','n','r'} };
+						 {'P','p','p','p','p','p','p','p'},
+						 {'0','n','b','q','k','b','n','r'} };
 	int fromX, fromY;
 	struct move {
 		int x, y, fromY, fromX;
@@ -51,9 +51,11 @@ void chessboard::addloc(int x, int y, int fromX, int fromY) {
 		loc.piece = 'q';
 	}
 	else if (board[fromY][fromX] == 'P' && fromY == 6 && y == 7){
-		loc.piece == 'Q';
+		loc.piece = 'Q';
 	}
-	loc.piece = board[fromY][fromX];
+	else {
+		loc.piece = board[fromY][fromX];
+	}
 	loc.fromX = fromX;
 	loc.fromY = fromY;
 	possible.push_back(loc);
@@ -148,7 +150,6 @@ void chessboard::possibleMoves(char side) {
 				}
 			}
 			
-			if(board[y][x] == 'K')
 			if (islower(board[y][x]) && side == 'B') { // svart
 				if (board[y][x] == 'p') {
 					if (board[y - 1][x] == '0') { // bonde 1 fram
@@ -179,7 +180,9 @@ void chessboard::printpossible(){
 	for (auto i = possible.begin(); i != possible.end(); i++) {
 		count += 1;
 		cout << "(x, y): " << (*i).x << ", " << (*i).y;
-		cout << " piece: " << (*i).piece  << " to square:  " << board[(*i).y][(*i).x]<< endl;
+		cout << " piece: " << (*i).piece << " to square:  " << board[(*i).y][(*i).x];
+		cout << "from (x, y): " << (*i).fromX << ", " << (*i).fromY;
+		cout << endl;
 	}
 	cout << "possible moves: " << count << endl;
 }
