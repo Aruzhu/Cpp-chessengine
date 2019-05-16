@@ -7,7 +7,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\chess112cpp.cpp">
+    <ClCompile Include="chess112cpp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -20,8 +20,8 @@ private:
 						 {'0','0','0','0','0','0','0','0'},
 						 {'0','0','0','0','0','0','0','0'},
 						 {'0','0','0','0','0','0','0','0'},
-						 {'P','p','p','p','p','p','p','p'},
-						 {'0','n','b','q','k','b','n','r'} };
+						 {'p','p','p','p','p','p','p','p'},
+						 {'r','n','b','q','k','b','n','r'} };
 	int fromX, fromY;
 	struct move {
 		int x, y, fromY, fromX;
@@ -47,10 +47,10 @@ void chessboard::printboard() {
 }
 void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	loc.x = x; loc.y = y;
-	if (board[fromY][fromX] == 'p' && fromY == 1 && y == 0) {
+	if (board[fromY][fromX] == 'p' && fromY == 1 && y == 0 && board[y][x] == '0') {
 		loc.piece = 'q';
 	}
-	else if (board[fromY][fromX] == 'P' && fromY == 6 && y == 7){
+	else if (board[fromY][fromX] == 'P' && fromY == 6 && y == 7 && board[y][x] == '0'){
 		loc.piece = 'Q';
 	}
 	else {
@@ -60,19 +60,22 @@ void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	loc.fromY = fromY;
 	possible.push_back(loc);
 }
+bool isvalid(int x, int y) {
+	return (y >= 0 && y < 8 && x >= 0 && x < 8);
+}
 void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char side) {
 	int tempY, tempX;
 	bool valid;
 	char square = '0';
 	for (int i = 0; i < size; i++) {
 		tempY = y + piecesquares[i][0]; tempX = x + piecesquares[i][1];
-		valid = tempY >= 0 && tempY < 8 && tempX >= 0 && tempX < 8;
+		valid = isvalid(tempX, tempY);
 		if (valid) {
 			square = board[tempY][tempX];
 			while (square == '0' && valid) {
 				addloc(tempX, tempY, x, y);
 				tempY += piecesquares[i][0]; tempX += piecesquares[i][1];
-				valid = tempY >= 0 && tempY < 8 && tempX >= 0 && tempX < 8;
+				valid = isvalid(tempX, tempY);
 				if (valid) { square = board[tempY][tempX]; } // må teste om tempy og tempx er utenfor
 			}
 			if (islower(square) && side == 'W' && isupper(board[y][x])) { // error free code since 1981
@@ -103,11 +106,11 @@ void chessboard::possibleMoves(char side) {
 							addloc(x, y + 2, x, y);
 						}
 					}
-					if (islower(board[y + 1][x + 1]) && board[y + 1][x + 1] != 'k') {
-						addloc(y + 1, x + 1, x, y);
+					if (islower(board[y + 1][x + 1]) && board[y + 1][x + 1] != 'k' && isvalid(x+1, y+1)) {
+						addloc(x + 1, y + 1, x, y);
 					}
-					if (islower(board[y + 1][x - 1]) && board[y + 1][x + 1] != 'k') {
-						addloc(y + 1, x + 1, x, y);
+					if (islower(board[y + 1][x - 1]) && board[y + 1][x + 1] != 'k' && isvalid(x-1, y+1)) {
+						addloc(x - 1, y + 1, x, y);
 					}
 				}
 			}
@@ -158,11 +161,11 @@ void chessboard::possibleMoves(char side) {
 							addloc(x, y-2, x, y);
 						}
 					}
-					if (isupper(board[y - 1][x + 1]) && board[y - 1][x + 1] != 'k') {
-						addloc(y - 1, x + 1, x, y);
+					if (isupper(board[y - 1][x + 1]) && board[y - 1][x + 1] != 'k'  && isvalid(x + 1, y - 1)) {
+						addloc(x + 1, y - 1, x, y);
 					}
-					if (isupper(board[y - 1][x - 1]) && board[y - 1][x - 1] != 'k') {
-						addloc(y - 1, x - 1, x, y);
+					if (isupper(board[y - 1][x - 1]) && board[y - 1][x - 1] != 'k'  && isvalid(x - 1, y - 1)) {
+						addloc(x - 1, y - 1, x, y);
 					}
 				}
 			}
@@ -181,7 +184,10 @@ void chessboard::printpossible(){
 		count += 1;
 		cout << "(x, y): " << (*i).x << ", " << (*i).y;
 		cout << " piece: " << (*i).piece << " to square:  " << board[(*i).y][(*i).x];
-		cout << "from (x, y): " << (*i).fromX << ", " << (*i).fromY;
+		cout << " from (x, y): " << (*i).fromX << ", " << (*i).fromY;
+		if ((*i).piece == 'p' && (*i).piece == 'P') {
+			if()
+		}
 		cout << endl;
 	}
 	cout << "possible moves: " << count << endl;
