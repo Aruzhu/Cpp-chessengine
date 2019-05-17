@@ -7,14 +7,14 @@ using namespace std;
 class node { // subtracts depth as it goes deeper. eliminates bad ones?
 	private:
 		int depth;
+		char board[8][8];
 		list<node> nodes;
+		chessboard* board;
 	public:
-
-
-};
+		node(chessboard* ptr) { &board = &ptr; }
 class chessboard { 
-private:
-	char board[8][8] = { {'R','N','B','K','Q','B','N','R'},
+	protected:
+	char board[8][8] = { {'R','N','B','K','0','B','N','R'},
 						 {'P','P','P','P','P','P','P','P'},
 						 {'0','0','0','0','0','0','0','0'},
 						 {'0','0','0','0','0','0','0','0'},
@@ -35,6 +35,7 @@ public:
 	void possibleMoves(char side);
 	void move(char piece, int x, int y);
 	void printpossible();
+	int eval(char side);
 };
 void chessboard::printboard() {
 	for (int y = 0; y < 8; y++) {
@@ -92,6 +93,7 @@ void chessboard::possibleMoves(char side) {
 	int kingsquares[8][2] = { {1,-1} ,{1,0} ,{1,1} ,{0,1} ,{-1,-1} ,{-1,0} ,{-1,-1} ,{0,-1} };
 	int bishopsquares[4][2] = { {1,-1}, {1, 1}, {-1,1}, {-1, -1} };
 	int rooksquares[4][2] = { {1,0}, {-1,0}, {0,1}, {0,-1}};
+	int pawnsquares[2][2] = { {1,-1}, {1,1} }; // POTENTIAL REFACTORING
 	char square = '0';
 	int tempX, tempY;
 	bool valid = false;
@@ -185,18 +187,39 @@ void chessboard::printpossible(){
 		cout << "(x, y): " << (*i).x << ", " << (*i).y;
 		cout << " piece: " << (*i).piece << " to square:  " << board[(*i).y][(*i).x];
 		cout << " from (x, y): " << (*i).fromX << ", " << (*i).fromY;
-		if ((*i).piece == 'p' && (*i).piece == 'P') {
-			if()
-		}
 		cout << endl;
 	}
 	cout << "possible moves: " << count << endl;
 }
 
+int chessboard::eval(char side){
+	char pieces[6] = { 'k','q','b','n','r', 'p' };
+	int value[6] = { 200, 10, 3, 3, 5, 1};
+	int blackev = 0;
+	int whiteev = 0;
+	for (int y = 0; y < 8; y++) {
+		for (int x = 0; x < 8; x++) {
+			for (int i = 0; i < 6; i++) {
+				if (tolower(board[y][x]) == pieces[i]) {
+					(isupper(board[y][x])) ? whiteev += value[i] : blackev += value[i];
+				}
+			}
+		}
+	}
+	return (whiteev-blackev);
+}
+class player : public chessboard {
+private:
+	int depth;
+	list<node> nodes;
+public:
+};
 int main() {
 	chessboard board;
 	board.printboard();
 	board.possibleMoves('W');
 	board.printpossible();
+	cout << board.eval('W') << endl;
 	cout << "finished" << endl;
+
 }
