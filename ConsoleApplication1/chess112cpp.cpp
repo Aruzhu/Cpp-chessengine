@@ -19,6 +19,7 @@ class chessboard {
 	struct move {
 		int x, y, fromY, fromX;
 		char piece;
+		int ev;
 	} loc;
 	list<move> possible;
 public:
@@ -219,8 +220,8 @@ int chessboard::eval(char side){ // not working
 }
 void chessboard::callPossible(int depth){
 	list<chessboard*> boards;
-	list<int> ev;
-	int evaliation;
+	//list<int> ev;
+	//int evaliation;
 	chessboard* bPtr;
 	int d = depth - 1;
 	if (d != 0) {
@@ -230,9 +231,9 @@ void chessboard::callPossible(int depth){
 			bPtr->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
 			boards.push_back(bPtr);
 
-			evaliation = bPtr->eval(((isupper((*i).piece)) ? 'W' : 'B'));
-			ev.push_back(evaliation);
-			cout << evaliation << " " << (*i).x << " " << (*i).y << endl;
+			(*i).ev = bPtr->eval(((isupper((*i).piece)) ? 'W' : 'B'));
+			//ev.push_back(evaliation);
+			cout << (*i).ev << " " << (*i).x << " " << (*i).y << endl;
 
 			bPtr->callPossible(d);
 		}
