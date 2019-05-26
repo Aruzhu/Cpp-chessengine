@@ -4,24 +4,17 @@
 
 using namespace std;
 // breath first
-class node { // subtracts depth as it goes deeper. eliminates bad ones?
-	private:
-		int depth;
-		char board[8][8];
-		list<node> nodes;
-		chessboard* board;
-	public:
-		node(chessboard* ptr) { &board = &ptr; }
+//class node { // subtracts depth as it goes deeper. eliminates bad ones?
+//	private:
+//		int depth;
+//		char board[8][8];
+//		list<node> nodes;
+//		chessboard* board;
+//	public:
+//		node(chessboard* ptr) { &board = &ptr; }
 class chessboard { 
 	protected:
-	char board[8][8] = { {'R','N','B','K','0','B','N','R'},
-						 {'P','P','P','P','P','P','P','P'},
-						 {'0','0','0','0','0','0','0','0'},
-						 {'0','0','0','0','0','0','0','0'},
-						 {'0','0','0','0','0','0','0','0'},
-						 {'0','0','0','0','0','0','0','0'},
-						 {'p','p','p','p','p','p','p','p'},
-						 {'r','n','b','q','k','b','n','r'} };
+		char board[8][8];
 	int fromX, fromY;
 	struct move {
 		int x, y, fromY, fromX;
@@ -29,14 +22,24 @@ class chessboard {
 	} loc;
 	list<move> possible;
 public:
+	chessboard(char b[][8]);
 	void printboard();
 	void addloc(int x, int y, int fromX, int fromY);
 	void repeat(int piecesquares[][2], int size, int x, int y, char side);
 	void possibleMoves(char side);
 	void move(char piece, int x, int y);
+	void move(char piece, int x, int y, int fromX, int fromY);
 	void printpossible();
 	int eval(char side);
+	void callPossible(int depth);
 };
+chessboard::chessboard(char b[][8]){
+	for (int y = 0; y < 8; y++) {
+		for (int x = 0; x < 8; x++) {
+			board[y][x] = b[y][x];
+		}
+	}
+}
 void chessboard::printboard() {
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
@@ -179,6 +182,10 @@ void chessboard::move(char piece, int x, int y){
 	board[fromY][fromX] = '0';
 	board[y][x] = piece;
 }
+void chessboard::move(char piece, int x, int y, int fromX, int fromY) {
+	board[fromY][fromX] = '0';
+	board[y][x] = piece;
+}
 
 void chessboard::printpossible(){
 	int count = 0;
@@ -192,7 +199,7 @@ void chessboard::printpossible(){
 	cout << "possible moves: " << count << endl;
 }
 
-int chessboard::eval(char side){
+int chessboard::eval(char side){ // not working
 	char pieces[6] = { 'k','q','b','n','r', 'p' };
 	int value[6] = { 200, 10, 3, 3, 5, 1};
 	int blackev = 0;
@@ -201,25 +208,58 @@ int chessboard::eval(char side){
 		for (int x = 0; x < 8; x++) {
 			for (int i = 0; i < 6; i++) {
 				if (tolower(board[y][x]) == pieces[i]) {
-					(isupper(board[y][x])) ? whiteev += value[i] : blackev += value[i];
+					(isupper(board[y][x])) ? (whiteev += value[i]) : (blackev += value[i]);
+					break;
 				}
 			}
 		}
 	}
+
 	return (whiteev-blackev);
 }
-class player : public chessboard {
-private:
-	int depth;
-	list<node> nodes;
-public:
-};
+void chessboard::callPossible(int depth){
+	list<chessboard*> boards;
+	list<int> ev;
+	int evaliation;
+	chessboard* bPtr;
+	int d = depth - 1;
+	if (d != 0) {
+		for (auto i = possible.begin(); i != possible.end(); i++) {
+			bPtr = new chessboard(board);
+			bPtr->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
+			bPtr->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
+			boards.push_back(bPtr);
+
+			evaliation = bPtr->eval(((isupper((*i).piece)) ? 'W' : 'B'));
+			ev.push_back(evaliation);
+			cout << evaliation << " " << (*i).x << " " << (*i).y << endl;
+
+			bPtr->callPossible(d);
+		}
+	}
+	
+}
+//class player : public chessboard {
+//private:
+//	int depth;
+//	list<node> nodes;
+//public:
+//};
+char startboard[8][8] = { {'R','N','B','K','Q','B','N','R'},
+						  {'P','P','P','P','P','P','P','P'},
+					      {'0','0','0','0','0','0','0','0'},
+					      {'0','0','0','0','0','0','0','0'},
+					      {'0','0','0','0','0','0','0','0'},
+					      {'0','0','0','0','0','0','0','0'},
+					      {'p','p','p','p','p','p','p','p'},
+					      {'r','n','b','q','k','b','n','r'} };
 int main() {
-	chessboard board;
+	chessboard board(startboard);
 	board.printboard();
 	board.possibleMoves('W');
 	board.printpossible();
 	cout << board.eval('W') << endl;
+	board.callPossible(1);
 	cout << "finished" << endl;
 
 }
