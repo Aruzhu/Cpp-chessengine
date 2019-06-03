@@ -1,27 +1,23 @@
 #include <list>
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 using namespace std;
 // breath first
-//class node { // subtracts depth as it goes deeper. eliminates bad ones?
-//	private:
-//		int depth;
-//		char board[8][8];
-//		list<node> nodes;
-//		chessboard* board;
-//	public:
-//		node(chessboard* ptr) { &board = &ptr; }
+
 class chessboard { 
 	protected:
 		char board[8][8];
 	int fromX, fromY;
+	bool firstScan = false; // have had its first evaluation scan
 	struct move {
 		int x, y, fromY, fromX;
 		char piece;
 		int ev;
 	} loc;
 	list<move> possible;
+	list<chessboard> boards;
 public:
 	chessboard(char b[][8]);
 	void printboard();
@@ -32,7 +28,9 @@ public:
 	void move(char piece, int x, int y, int fromX, int fromY);
 	void printpossible();
 	int eval(char side);
-	void callPossible(int depth);
+	int retBest();
+	void printBest();
+	int callPossible();
 };
 chessboard::chessboard(char b[][8]){
 	for (int y = 0; y < 8; y++) {
@@ -200,67 +198,80 @@ void chessboard::printpossible(){
 	cout << "possible moves: " << count << endl;
 }
 
-int chessboard::eval(char side){ // not working
+int chessboard::eval(char side) { // not working
 	char pieces[6] = { 'k','q','b','n','r', 'p' };
-	int value[6] = { 200, 10, 3, 3, 5, 1};
+	int value[6] = { 200, 10, 3, 3, 5, 1 };
 	int blackev = 0;
 	int whiteev = 0;
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
-			for (int i = 0; i < 6; i++) {
-				if (tolower(board[y][x]) == pieces[i]) {
-					(isupper(board[y][x])) ? (whiteev += value[i]) : (blackev += value[i]);
-					break;
+			if (board[y][x] != '0') {
+				for (int i = 0; i < 6; i++) {
+					if (tolower(board[y][x]) == pieces[i]) {
+						(isupper(board[y][x])) ? (whiteev += value[i]) : (blackev += value[i]);
+						break;
+					}
 				}
 			}
 		}
 	}
-
-	return (whiteev-blackev);
+	
+	return (side == 'W') ? (whiteev - blackev) : -1*(whiteev - blackev);
 }
-void chessboard::callPossible(int depth){
-	list<chessboard*> boards;
-	//list<int> ev;
-	//int evaliation;
-	chessboard* bPtr;
-	int d = depth - 1;
-	if (d != 0) {
-		for (auto i = possible.begin(); i != possible.end(); i++) {
-			bPtr = new chessboard(board);
-			bPtr->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
-			bPtr->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
-			boards.push_back(bPtr);
+int chessboard::retBest() {
+	int max = 0;
+	int index = 0;
+	for (auto i = possible.begin(); i != possible.end(); i++) {
+		max = ((*i).ev > max) ? (*i).ev : max;
+	}
+	return max;
+}
+void chessboard::printBest() {
+	int count = 0;
+	for (auto i = possible.begin(); i != possible.end(); i++) {
+		count += 1;
+		cout << "(x, y): " << (*i).x << ", " << (*i).y;
+		cout << " piece: " << (*i).piece << " to square:  " << board[(*i).y][(*i).x];
+		cout << " from (x, y): " << (*i).fromX << ", " << (*i).fromY;
+		cout << " ev: " << (*i).ev;
+		cout << endl;
+	}
+	cout << "possible moves: " << count << endl;
+}
 
-			(*i).ev = bPtr->eval(((isupper((*i).piece)) ? 'W' : 'B'));
-			//ev.push_back(evaliation);
+int chessboard::callPossible(){ // populates this class boards, and the moves with EV
+	chessboard* moveBoard;
+	for (auto i = possible.begin(); i != possible.end(); i++) {
+		if (firstScan == false) {
+			moveBoard = new chessboard(board);
+			moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
+			moveBoard->printboard();
+			moveBoard->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
+			(*i).ev = moveBoard->eval(((isupper((*i).piece)) ? 'W' : 'B')); // må ha kompansasjon for tre
 			cout << (*i).ev << " " << (*i).x << " " << (*i).y << endl;
+				
 
-			bPtr->callPossible(d);
+			boards.push_back((*moveBoard));
 		}
 	}
-	
+	return 1;
 }
-//class player : public chessboard {
-//private:
-//	int depth;
-//	list<node> nodes;
-//public:
-//};
-char startboard[8][8] = { {'R','N','B','K','Q','B','N','R'},
-						  {'P','P','P','P','P','P','P','P'},
-					      {'0','0','0','0','0','0','0','0'},
-					      {'0','0','0','0','0','0','0','0'},
+char startboard[8][8] = { {'R','N','B','K','0','B','N','R'},
+						  {'P','P','P','P','0','P','P','P'},
+					      {'0','0','0','0','Q','0','0','0'},
+					      {'0','0','0','0','k','0','0','0'},
 					      {'0','0','0','0','0','0','0','0'},
 					      {'0','0','0','0','0','0','0','0'},
 					      {'p','p','p','p','p','p','p','p'},
-					      {'r','n','b','q','k','b','n','r'} };
+					      {'r','n','b','q','0','b','n','r'} };
 int main() {
 	chessboard board(startboard);
 	board.printboard();
-	board.possibleMoves('W');
+	board.possibleMoves('B');
 	board.printpossible();
-	cout << board.eval('W') << endl;
-	board.callPossible(1);
+	//cout << board.eval('B') << endl;
+	//board.callPossible();
+	//board.printBest();
 	cout << "finished" << endl;
 
 }
