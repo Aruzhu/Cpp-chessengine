@@ -6,11 +6,24 @@
 using namespace std;
 // breath first
 
+// http://www.frayn.net/beowulf/theory.html
+/*
+class node(){
+	private:
+		chessboard* bPtr;
+		list<chessboard> boards;
+}
+*/
+
+struct move {
+	int x, y, fromY, fromX;
+	char piece;
+	int ev;
+};
 class chessboard { 
 	protected:
 		char board[8][8];
 	int fromX, fromY;
-	bool firstScan = false; // have had its first evaluation scan
 	struct move {
 		int x, y, fromY, fromX;
 		char piece;
@@ -18,6 +31,8 @@ class chessboard {
 	} loc;
 	list<move> possible;
 	list<chessboard> boards;
+	move bestmove;
+
 public:
 	chessboard(char b[][8]);
 	void printboard();
@@ -28,9 +43,9 @@ public:
 	void move(char piece, int x, int y, int fromX, int fromY);
 	void printpossible();
 	int eval(char side);
-	int retBest();
+	int retBest(char side);
 	void printBest();
-	int callPossible();
+	int callPossible(int depth);
 };
 chessboard::chessboard(char b[][8]){
 	for (int y = 0; y < 8; y++) {
@@ -216,15 +231,21 @@ int chessboard::eval(char side) { // not working
 		}
 	}
 	
-	return (side == 'W') ? (whiteev - blackev) : -1*(whiteev - blackev);
+	return (whiteev - blackev);
 }
-int chessboard::retBest() {
-	int max = 0;
+int chessboard::retBest(char side) {
+	int minmax = 0;
 	int index = 0;
 	for (auto i = possible.begin(); i != possible.end(); i++) {
-		max = ((*i).ev > max) ? (*i).ev : max;
+		if (side == 'W') {
+			minmax = ((*i).ev >= minmax) ? (*i).ev : minmax;
+		}
+		else {
+			minmax = ((*i).ev <= minmax) ? (*i).ev : minmax;
+		}
+		
 	}
-	return max;
+	return minmax;
 }
 void chessboard::printBest() {
 	int count = 0;
@@ -239,39 +260,47 @@ void chessboard::printBest() {
 	cout << "possible moves: " << count << endl;
 }
 
-int chessboard::callPossible(){ // populates this class boards, and the moves with EV
+int chessboard::callPossible(int depth){ // populates this class boards, and the moves with EV
 	chessboard* moveBoard;
+	int d = depth - 1;
 	for (auto i = possible.begin(); i != possible.end(); i++) {
-		if (firstScan == false) {
-			moveBoard = new chessboard(board);
-			moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
-			moveBoard->printboard();
-			moveBoard->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
+		moveBoard = new chessboard(board);
+		moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
+		moveBoard->printboard();
+		moveBoard->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
+		if (d == 0) {
 			(*i).ev = moveBoard->eval(((isupper((*i).piece)) ? 'W' : 'B')); // må ha kompansasjon for tre
-			cout << (*i).ev << " " << (*i).x << " " << (*i).y << endl;
+		}
+		else {
+			moveBoard->callPossible(d);
+			(*i).ev = moveBoard->retBest((( islower((*i).piece) ) ? 'W' : 'B'));
+		}
+		if ((*i).ev > bestmove.ev) bestmove = (*i);
+		cout << (*i).ev << " " << (*i).x << " " << (*i).y << endl;
 				
 
-			boards.push_back((*moveBoard));
-		}
+		boards.push_back((*moveBoard));
 	}
+	cout << "best move" << endl;
+	cout << bestmove.x << " " << bestmove.y << " " << bestmove.piece << endl;
 	return 1;
 }
-char startboard[8][8] = { {'R','N','B','K','0','B','N','R'},
-						  {'P','P','P','P','0','P','P','P'},
-					      {'0','0','0','0','Q','0','0','0'},
-					      {'0','0','0','0','k','0','0','0'},
+char startboard[8][8] = { {'R','N','B','K','Q','B','N','R'},
+						  {'P','P','P','0','P','P','P','P'},
 					      {'0','0','0','0','0','0','0','0'},
 					      {'0','0','0','0','0','0','0','0'},
+					      {'0','0','0','0','0','0','0','0'},
+					      {'0','0','0','0','0','0','0','q'},
 					      {'p','p','p','p','p','p','p','p'},
-					      {'r','n','b','q','0','b','n','r'} };
+					      {'r','n','b','q','k','b','n','r'} };
 int main() {
 	chessboard board(startboard);
+
+	board.possibleMoves('W');
+	cout << board.eval('W') << endl;
+	board.callPossible(2);
 	board.printboard();
-	board.possibleMoves('B');
-	board.printpossible();
-	//cout << board.eval('B') << endl;
-	//board.callPossible();
-	//board.printBest();
+	board.printBest();
 	cout << "finished" << endl;
 
 }
