@@ -43,9 +43,10 @@ public:
 	void move(char piece, int x, int y);
 	void move(char piece, int x, int y, int fromX, int fromY);
 	void printpossible();
-	int eval(char side);
+	int eval(char side, int evalPoss);
 	int retBest(char side);
 	void printBest();
+	void printBestMove();
 	int callPossible(int depth);
 };
 chessboard::chessboard(char b[][8]){
@@ -66,7 +67,7 @@ void chessboard::printboard() {
 }
 void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	loc.x = x; loc.y = y;
-	if (board[fromY][fromX] == 'p' && fromY == 1 && y == 0 && board[y][x] == '0') {
+	if (board[fromY][fromX] == 'p' && fromY == 1 && y == 0 && board[y][x] == '0') { // autoqueen mofo
 		loc.piece = 'q';
 	}
 	else if (board[fromY][fromX] == 'P' && fromY == 6 && y == 7 && board[y][x] == '0'){
@@ -75,6 +76,8 @@ void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	else {
 		loc.piece = board[fromY][fromX];
 	}
+
+
 	loc.fromX = fromX;
 	loc.fromY = fromY;
 	possible.push_back(loc);
@@ -99,11 +102,11 @@ void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char sid
 					valid = isvalid(tempX, tempY);
 					if (valid) { square = board[tempY][tempX]; } // må teste om tempy og tempx er utenfor
 				}
-				if (islower(square) && side == 'W' && isupper(board[y][x])) { // error free code since 1981
-					addloc(tempX, tempY, x, y);
+				if (islower(square) && side == 'W' && isupper(board[y][x]) && board[y][x] != 'k') { // error free code since 1981
+					addloc(tempX, tempY, x, y); // taking a black piece as white
 				}
-				if (isupper(square) && side == 'B' && islower(board[y][x])) {
-					addloc(tempX, tempY, x, y);
+				if (isupper(square) && side == 'B' && islower(board[y][x]) && board[y][x] != 'K') {
+					addloc(tempX, tempY, x, y); // taking a white piece as black
 				}
 			}
 		}
@@ -138,18 +141,7 @@ void chessboard::possibleMoves(char side) {
 				}
 			}
 			if (board[y][x] == 'N' || board[y][x] == 'n') { // knight moves the same way independent of side
-				for (int i = 0; i < 8; i++) {
-					tempY = y + knightsquares[i][0]; tempX = x + knightsquares[i][1];
-					if (tempY >= 0 && tempY < 8 && tempX >= 0 && tempX < 8) {
-						square = board[tempY][tempX];
-						if ((square == '0' || islower(square)) && side == 'W' && isupper(board[y][x]) && board[tempY][tempX] != 'k') {
-							addloc(tempX, tempY, x, y);
-						}
-						if ((square == '0' || isupper(square)) && side == 'B' && islower(board[y][x]) && board[tempY][tempX] != 'K') {
-							addloc(tempX, tempY, x, y);
-						}
-					}
-				}
+				repeat(knightsquares, 8, x, y, side);
 			}
 			if (board[y][x] == 'B' || board[y][x] == 'b') {
 				repeat(bishopsquares, 4, x, y, side);
@@ -217,27 +209,28 @@ void chessboard::printpossible(){
 	cout << "possible moves: " << count << endl;
 }
 
-int chessboard::eval(char side) { // not working
-	chessboard::printboard();
+int chessboard::eval(char side, int evalPoss) {
+	//chessboard::printboard();
 	char pieces[6] = { 'k','q','b','n','r', 'p' };
-	char count[6] = { 0,0,0,0,0,0 };
+	//char count[6] = { 0,0,0,0,0,0 };
 	int value[6] = { 200, 10, 3, 3, 5, 1 };
-	int blackev = 0;
-	int whiteev = 0;
+	int blackev = ((side == 'W')? 0.1*evalPoss : 0.1*possible.size());
+	int whiteev = ((side == 'B')? 0.1*evalPoss : 0.1*possible.size());
+	int ev;
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
 			if (board[y][x] != '0') {
 				for (int i = 0; i < 6; i++) {
 					if (tolower(board[y][x]) == pieces[i]) {
 						(isupper(board[y][x])) ? (whiteev += value[i]) : (blackev += value[i]);
-						count[i] += 1;
+						//count[i] += 1;
 						break;
 					}
 				}
 			}
 		}
 	}
-	int ev = whiteev - blackev;
+	ev = whiteev - blackev;
 	return ev;
 }
 int chessboard::retBest(char side) {
@@ -266,48 +259,60 @@ void chessboard::printBest() {
 	}
 	cout << "possible moves: " << count << endl;
 }
-
+void chessboard::printBestMove() {
+	cout << "(x, y): " << bestmove.x << ", " << bestmove.y;
+	cout << " piece: " << bestmove.piece << " to square:  " << board[bestmove.y][bestmove.x];
+	cout << " from (x, y): " << bestmove.fromX << ", " << bestmove.fromY;
+	cout << " ev: " << bestmove.ev;
+	cout << endl;
+}
 int chessboard::callPossible(int depth){ // populates this class boards, and the moves with EV
 	chessboard* moveBoard;
 	int d = depth - 1;
 	for (auto i = possible.begin(); i != possible.end(); i++) {
 		moveBoard = new chessboard(board);
 		moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
-		moveBoard->printboard();
 		moveBoard->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
 		if (d == 0) {
-			(*i).ev = moveBoard->eval(((isupper((*i).piece)) ? 'W' : 'B')); // må ha kompansasjon for tre
+			(*i).ev = moveBoard->eval(((isupper((*i).piece)) ? 'W' : 'B'), possible.size()); // må ha kompansasjon for tre
 		}
 		else {
 			moveBoard->callPossible(d);
 			(*i).ev = moveBoard->retBest((( islower((*i).piece) ) ? 'W' : 'B'));
 		}
-		if ((*i).ev > bestmove.ev) bestmove = (*i);
-		cout << (*i).ev << " " << (*i).x << " " << (*i).y << endl;
+		if (((*i).ev > bestmove.ev) && isupper((*i).piece)) bestmove = (*i); // WRONG
+		if (((*i).ev < bestmove.ev) && islower((*i).piece)) bestmove = (*i);
 				
 
 		boards.push_back((*moveBoard));
 	}
-	cout << "best move" << endl;
-	cout << bestmove.x << " " << bestmove.y << " " << bestmove.piece << endl;
 	return 1;
 }
 char startboard[8][8] = { {'R','N','B','K','Q','B','N','R'},
-						  {'P','P','P','0','P','P','P','P'},
+						  {'P','P','P','P','P','P','P','P'},
 					      {'0','0','0','0','0','0','0','0'},
 					      {'0','0','0','0','0','0','0','0'},
 					      {'0','0','0','0','0','0','0','0'},
-					      {'0','0','0','0','0','0','0','q'},
-					      {'p','p','p','p','p','p','p','p'},
+					      {'0','0','0','0','0','0','0','0'},
+					      {'p','p','p','p','p','p','0','p'},
 					      {'r','n','b','q','k','b','n','r'} };
+
+char testboard[8][8] = {  {'0','0','0','0','0','0','0','0'},
+						  {'0','P','0','0','0','P','n','P'},
+						  {'Q','0','0','0','R','0','0','0'},
+						  {'0','0','0','P','0','0','0','0'},
+						  {'0','0','0','0','0','0','0','0'},
+						  {'p','p','b','N','p','0','p','0'},
+						  {'0','0','0','0','0','0','0','p'},
+						  {'0','r','0','q','0','r','0','0'} };
 int main() {
-	chessboard board(startboard);
+	chessboard board(testboard);
 
 	board.possibleMoves('W');
-	cout << board.eval('W') << endl;
-	board.callPossible(2);
+	board.callPossible(3);
 	board.printboard();
 	board.printBest();
+	board.printBestMove();
 	cout << "finished" << endl;
 
 }
