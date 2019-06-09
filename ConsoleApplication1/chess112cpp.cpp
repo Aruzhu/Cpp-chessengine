@@ -218,7 +218,9 @@ void chessboard::printpossible(){
 }
 
 int chessboard::eval(char side) { // not working
+	chessboard::printboard();
 	char pieces[6] = { 'k','q','b','n','r', 'p' };
+	char count[6] = { 0,0,0,0,0,0 };
 	int value[6] = { 200, 10, 3, 3, 5, 1 };
 	int blackev = 0;
 	int whiteev = 0;
@@ -228,14 +230,15 @@ int chessboard::eval(char side) { // not working
 				for (int i = 0; i < 6; i++) {
 					if (tolower(board[y][x]) == pieces[i]) {
 						(isupper(board[y][x])) ? (whiteev += value[i]) : (blackev += value[i]);
+						count[i] += 1;
 						break;
 					}
 				}
 			}
 		}
 	}
-	
-	return (whiteev - blackev);
+	int ev = whiteev - blackev;
+	return ev;
 }
 int chessboard::retBest(char side) {
 	int minmax = 0;
