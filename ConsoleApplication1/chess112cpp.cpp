@@ -37,6 +37,7 @@ public:
 	chessboard(char b[][8]);
 	void printboard();
 	void addloc(int x, int y, int fromX, int fromY);
+	bool isvalid(int x, int y);
 	void repeat(int piecesquares[][2], int size, int x, int y, char side);
 	void possibleMoves(char side);
 	void move(char piece, int x, int y);
@@ -78,29 +79,32 @@ void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	loc.fromY = fromY;
 	possible.push_back(loc);
 }
-bool isvalid(int x, int y) {
+bool chessboard::isvalid(int x, int y) {
 	return (y >= 0 && y < 8 && x >= 0 && x < 8);
 }
 void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char side) {
 	int tempY, tempX;
 	bool valid;
+	bool rightSide = (islower(board[y][x]) && side == 'B') || (isupper(board[y][x]) && side == 'W');
 	char square = '0';
-	for (int i = 0; i < size; i++) {
-		tempY = y + piecesquares[i][0]; tempX = x + piecesquares[i][1];
-		valid = isvalid(tempX, tempY);
-		if (valid) {
-			square = board[tempY][tempX];
-			while (square == '0' && valid) {
-				addloc(tempX, tempY, x, y);
-				tempY += piecesquares[i][0]; tempX += piecesquares[i][1];
-				valid = isvalid(tempX, tempY);
-				if (valid) { square = board[tempY][tempX]; } // må teste om tempy og tempx er utenfor
-			}
-			if (islower(square) && side == 'W' && isupper(board[y][x])) { // error free code since 1981
-				addloc(tempX, tempY, x, y);
-			}
-			if (isupper(square) && side == 'B' && islower(board[y][x])) {
-				addloc(tempX, tempY, x, y);
+	if (rightSide) {
+		for (int i = 0; i < size; i++) {
+			tempY = y + piecesquares[i][0]; tempX = x + piecesquares[i][1];
+			valid = isvalid(tempX, tempY);
+			if (valid) {
+				square = board[tempY][tempX];
+				while (square == '0' && valid) {
+					addloc(tempX, tempY, x, y);
+					tempY += piecesquares[i][0]; tempX += piecesquares[i][1];
+					valid = isvalid(tempX, tempY);
+					if (valid) { square = board[tempY][tempX]; } // må teste om tempy og tempx er utenfor
+				}
+				if (islower(square) && side == 'W' && isupper(board[y][x])) { // error free code since 1981
+					addloc(tempX, tempY, x, y);
+				}
+				if (isupper(square) && side == 'B' && islower(board[y][x])) {
+					addloc(tempX, tempY, x, y);
+				}
 			}
 		}
 	}
