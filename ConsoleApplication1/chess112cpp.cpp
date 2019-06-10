@@ -32,6 +32,7 @@ class chessboard {
 	} loc;
 	move lastmove;
 	list<move> possible;
+	list<move> blackpossible;
 	move bestmove;
 
 public:
@@ -49,6 +50,8 @@ public:
 	void printBest(); // print all moves with evaluation
 	void printBestMove(); // print the best move
 	int callPossible(int depth); // engine
+
+	bool checkstop(char side);
 };
 chessboard::chessboard(char b[][8]){
 	for (int y = 0; y < 8; y++) {
@@ -77,7 +80,9 @@ void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	else {
 		loc.piece = board[fromY][fromX];
 	}
-
+	if (board[x][y] == 'k' || board[y][x] == 'K') {
+		loc.kingtreat = true;
+	}
 
 	loc.fromX = fromX;
 	loc.fromY = fromY;
@@ -122,7 +127,6 @@ void chessboard::possibleMoves(char side) {
 	char square = '0';
 	int tempX, tempY;
 	bool valid = false;
-
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
 			if (isupper(board[y][x]) && side == 'W') { // hvit
@@ -199,7 +203,6 @@ void chessboard::move(char piece, int x, int y, int fromX, int fromY) {
 	lastmove.x = x;
 	lastmove.y = y;
 	lastmove.piece = piece;
-	lastmove.kingtreat = (board[y][x] == 'k' || board[y][x] == 'K');
 	board[fromY][fromX] = '0';
 	board[y][x] = piece;
 }
@@ -221,8 +224,8 @@ int chessboard::eval(char side, int evalPoss) {
 	char pieces[6] = { 'k','q','b','n','r', 'p' };
 	//char count[6] = { 0,0,0,0,0,0 };
 	int value[6] = { 200, 10, 3, 3, 5, 1 };
-	int blackev = ((side == 'W')? 0.3*evalPoss : 0.3*possible.size());
-	int whiteev = ((side == 'B')? 0.3*evalPoss : 0.3*possible.size());
+	int blackev = ((side == 'W')? 0.1*evalPoss : 0.1*possible.size());
+	int whiteev = ((side == 'B')? 0.1*evalPoss : 0.1*possible.size());
 	int ev;
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
@@ -295,13 +298,50 @@ int chessboard::callPossible(int depth){ // populates this class boards, and the
 	}
 	return 1;
 }
+bool chessboard::checkstop(char side){
+	bool kingtreat = false;
+	
+	
+	possibleMoves((side == 'W') ? 'B' : 'W');
+	blackpossible = possible;
+	possible.clear();
+	for (auto b = blackpossible.begin(); b != blackpossible.end(); b++) {
+		if (board[(*b).y][(*b).x] == 'k' || board[(*b).y][(*b).x] == 'K') {
+			kingtreat = true;
+			break;
+		}
+	}
+
+	if (kingtreat) {
+		possibleMoves(side);
+		for (auto i = possible.begin(); i != possible.end(); i++) {
+			for (auto b = blackpossible.begin(); b != blackpossible.end(); b++) {
+				
+				
+				if ((*i).piece == 'k' || (*i).piece == 'K') { // hvis konge flytter til en plass som er truet av svart så slett trekket.
+					if ((*i).x == (*b).x && (*i).y == (*b).y) {
+						possible.erase(i);
+						break;
+					}
+				}
+				else { // hvis kongen fortsatt er truet så slett trekket
+					if()
+				}
+			}
+		}
+		printpossible();
+		printboard();
+	}
+	blackpossible.clear();
+	return kingtreat;
+}
 char startboard[8][8] = { {'R','N','B','K','Q','B','N','R'},
 						  {'P','P','P','P','P','P','P','P'},
 					      {'0','0','0','0','0','0','0','0'},
 					      {'0','0','0','0','0','0','0','0'},
 					      {'0','0','0','0','0','0','0','0'},
 					      {'0','0','0','0','0','0','0','0'},
-					      {'p','p','p','p','p','p','0','p'},
+					      {'p','p','p','p','p','p','p','p'},
 					      {'r','n','b','q','k','b','n','r'} };
 
 char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'},
