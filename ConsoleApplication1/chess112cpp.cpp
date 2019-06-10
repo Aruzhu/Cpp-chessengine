@@ -262,6 +262,9 @@ void chessboard::printBest() {
 		cout << " piece: " << (*i).piece << " to square:  " << board[(*i).y][(*i).x];
 		cout << " from (x, y): " << (*i).fromX << ", " << (*i).fromY;
 		cout << " ev: " << (*i).ev;
+		if ((*i).kingtreat) {
+			cout << " KINGTREAT ";
+		}
 		cout << endl;
 	}
 	cout << "possible moves: " << count << endl;
