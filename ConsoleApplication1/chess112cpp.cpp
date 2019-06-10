@@ -29,7 +29,6 @@ class chessboard {
 		int x, y, fromY, fromX;
 		char piece;
 		int ev;
-		bool kingtreat = false;
 	} loc;
 	move lastmove;
 	list<move> possible;
@@ -39,7 +38,7 @@ class chessboard {
 public:
 	chessboard(char b[][8]);
 	void printboard(); // prints the board
-	void addloc(int x, int y, int fromX, int fromY); // adds a board location to possible
+	void addloc(int x, int y, int fromX, int fromY, bool kingtrett = false); // adds a board location to possible
 	bool isvalid(int x, int y); // move is inside the board
 	void repeat(int piecesquares[][2], int size, int x, int y, char side); // repeat testing of moves
 	void possibleMoves(char side); // fill possible list with possible moves
@@ -50,7 +49,7 @@ public:
 	int retBest(char side); // do minimax on the possible moves
 	void printBest(); // print all moves with evaluation
 	void printBestMove(); // print the best move
-	int callPossible(int depth); // engine
+	int callPossible(int depth, char paramSide); // engine
 
 	bool checktest(char side);
 
@@ -72,7 +71,7 @@ void chessboard::printboard() {
 	}
 	cout << endl;
 }
-void chessboard::addloc(int x, int y, int fromX, int fromY) {
+void chessboard::addloc(int x, int y, int fromX, int fromY, bool kingtrett) {
 	loc.x = x; loc.y = y;
 	if (board[fromY][fromX] == 'p' && fromY == 1 && y == 0 && board[y][x] == '0') { // autoqueen mofo
 		loc.piece = 'q';
@@ -82,9 +81,6 @@ void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	}
 	else {
 		loc.piece = board[fromY][fromX];
-	}
-	if (board[y][x] == 'k' || board[y][x] == 'K') {
-		loc.kingtreat = true;
 	}
 
 	loc.fromX = fromX;
@@ -271,9 +267,6 @@ void chessboard::printBest() {
 		cout << " piece: " << (*i).piece << " to square:  " << board[(*i).y][(*i).x];
 		cout << " from (x, y): " << (*i).fromX << ", " << (*i).fromY;
 		cout << " ev: " << (*i).ev;
-		if ((*i).kingtreat) {
-			cout << " KINGTREAT ";
-		}
 		cout << endl;
 	}
 	cout << "possible moves: " << count << endl;
@@ -285,13 +278,20 @@ void chessboard::printBestMove() {
 	cout << " ev: " << bestmove.ev;
 	cout << endl;
 }
-int chessboard::callPossible(int depth){ // populates this class boards, and the moves with EV
+int chessboard::callPossible(int depth, char paramSide){ // populates this class boards, and the moves with EV
 	chessboard* moveBoard;
 	chessboard* tempBoard;
 	bool kingtreat = false;
 	bool mate = false;
 	char side;
 	int d = depth - 1;
+
+	if (paramSide == 'B') {
+		bestmove.ev = INT_MIN;
+	}
+	else {
+		bestmove.ev = INT_MAX;
+	}
 	for (auto i = possible.begin(); i != possible.end(); i++) {
 		moveBoard = new chessboard(board); tempBoard = new chessboard(board);
 		moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
@@ -322,7 +322,7 @@ int chessboard::callPossible(int depth){ // populates this class boards, and the
 				(*i).ev = moveBoard->eval(side, possible.size());
 			}
 			else {
-				moveBoard->callPossible(d);
+				moveBoard->callPossible(d, side);
 				(*i).ev = moveBoard->retBest(side);
 			}
 		}
@@ -382,9 +382,9 @@ char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'},
 						  {'0','r','0','q','0','r','0','0'} };
 int main() {
 	chessboard board(testboard);
-
-	board.possibleMoves('B');
-	board.callPossible(DEPTH);
+	char side = 'W';
+	board.possibleMoves(side);
+	board.callPossible(DEPTH, side);
 	board.printboard();
 	board.printBest();
 	board.printBestMove();
