@@ -28,26 +28,27 @@ class chessboard {
 		int x, y, fromY, fromX;
 		char piece;
 		int ev;
+		bool kingtreat = false;
 	} loc;
+	move lastmove;
 	list<move> possible;
-	list<chessboard> boards;
 	move bestmove;
 
 public:
 	chessboard(char b[][8]);
-	void printboard();
-	void addloc(int x, int y, int fromX, int fromY);
-	bool isvalid(int x, int y);
-	void repeat(int piecesquares[][2], int size, int x, int y, char side);
-	void possibleMoves(char side);
-	void move(char piece, int x, int y);
-	void move(char piece, int x, int y, int fromX, int fromY);
-	void printpossible();
-	int eval(char side, int evalPoss);
-	int retBest(char side);
-	void printBest();
-	void printBestMove();
-	int callPossible(int depth);
+	void printboard(); // prints the board
+	void addloc(int x, int y, int fromX, int fromY); // adds a board location to possible
+	bool isvalid(int x, int y); // move is inside the board
+	void repeat(int piecesquares[][2], int size, int x, int y, char side); // repeat testing of moves
+	void possibleMoves(char side); // fill possible list with possible moves
+	void move(char piece, int x, int y); // move a piece
+	void move(char piece, int x, int y, int fromX, int fromY); // move a piece
+	void printpossible(); // print all possible moves
+	int eval(char side, int evalPoss); // get evaluation of current possistion
+	int retBest(char side); // do minimax on the possible moves
+	void printBest(); // print all moves with evaluation
+	void printBestMove(); // print the best move
+	int callPossible(int depth); // engine
 };
 chessboard::chessboard(char b[][8]){
 	for (int y = 0; y < 8; y++) {
@@ -102,10 +103,10 @@ void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char sid
 					valid = isvalid(tempX, tempY);
 					if (valid) { square = board[tempY][tempX]; } // må teste om tempy og tempx er utenfor
 				}
-				if (islower(square) && side == 'W' && isupper(board[y][x]) && board[y][x] != 'k') { // error free code since 1981
+				if (islower(square) && side == 'W' && isupper(board[y][x])) { // error free code since 1981
 					addloc(tempX, tempY, x, y); // taking a black piece as white
 				}
-				if (isupper(square) && side == 'B' && islower(board[y][x]) && board[y][x] != 'K') {
+				if (isupper(square) && side == 'B' && islower(board[y][x])) {
 					addloc(tempX, tempY, x, y); // taking a white piece as black
 				}
 			}
@@ -193,6 +194,12 @@ void chessboard::move(char piece, int x, int y){
 	board[y][x] = piece;
 }
 void chessboard::move(char piece, int x, int y, int fromX, int fromY) {
+	lastmove.fromX = fromX;
+	lastmove.fromY = fromY;
+	lastmove.x = x;
+	lastmove.y = y;
+	lastmove.piece = piece;
+	lastmove.kingtreat = (board[y][x] == 'k' || board[y][x] == 'K');
 	board[fromY][fromX] = '0';
 	board[y][x] = piece;
 }
@@ -214,8 +221,8 @@ int chessboard::eval(char side, int evalPoss) {
 	char pieces[6] = { 'k','q','b','n','r', 'p' };
 	//char count[6] = { 0,0,0,0,0,0 };
 	int value[6] = { 200, 10, 3, 3, 5, 1 };
-	int blackev = ((side == 'W')? 0.1*evalPoss : 0.1*possible.size());
-	int whiteev = ((side == 'B')? 0.1*evalPoss : 0.1*possible.size());
+	int blackev = ((side == 'W')? 0.3*evalPoss : 0.3*possible.size());
+	int whiteev = ((side == 'B')? 0.3*evalPoss : 0.3*possible.size());
 	int ev;
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
@@ -274,17 +281,14 @@ int chessboard::callPossible(int depth){ // populates this class boards, and the
 		moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
 		moveBoard->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
 		if (d == 0) {
-			(*i).ev = moveBoard->eval(((isupper((*i).piece)) ? 'W' : 'B'), possible.size()); // må ha kompansasjon for tre
+			(*i).ev = moveBoard->eval(((isupper((*i).piece)) ? 'W' : 'B'), possible.size());
 		}
 		else {
 			moveBoard->callPossible(d);
 			(*i).ev = moveBoard->retBest((( islower((*i).piece) ) ? 'W' : 'B'));
 		}
-		if (((*i).ev > bestmove.ev) && isupper((*i).piece)) bestmove = (*i); // WRONG
+		if (((*i).ev > bestmove.ev) && isupper((*i).piece)) bestmove = (*i); // compensates for which player turn it is
 		if (((*i).ev < bestmove.ev) && islower((*i).piece)) bestmove = (*i);
-				
-
-		boards.push_back((*moveBoard));
 	}
 	return 1;
 }
@@ -297,19 +301,19 @@ char startboard[8][8] = { {'R','N','B','K','Q','B','N','R'},
 					      {'p','p','p','p','p','p','0','p'},
 					      {'r','n','b','q','k','b','n','r'} };
 
-char testboard[8][8] = {  {'0','0','0','0','0','0','0','0'},
+char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'},
 						  {'0','P','0','0','0','P','n','P'},
 						  {'Q','0','0','0','R','0','0','0'},
 						  {'0','0','0','P','0','0','0','0'},
 						  {'0','0','0','0','0','0','0','0'},
 						  {'p','p','b','N','p','0','p','0'},
-						  {'0','0','0','0','0','0','0','p'},
+						  {'k','0','0','0','0','0','0','p'},
 						  {'0','r','0','q','0','r','0','0'} };
 int main() {
 	chessboard board(testboard);
 
 	board.possibleMoves('W');
-	board.callPossible(3);
+	board.callPossible(2);
 	board.printboard();
 	board.printBest();
 	board.printBestMove();
