@@ -14,7 +14,8 @@ class node(){
 		list<chessboard> boards;
 }
 */
-
+const int MATEVALUE = 300;
+const int DEPTH = 3;
 struct move {
 	int x, y, fromY, fromX;
 	char piece;
@@ -51,6 +52,8 @@ public:
 	void printBestMove(); // print the best move
 	int callPossible(int depth); // engine
 
+	bool checktest(char side);
+
 	bool checkstop(char side);
 };
 chessboard::chessboard(char b[][8]){
@@ -80,7 +83,7 @@ void chessboard::addloc(int x, int y, int fromX, int fromY) {
 	else {
 		loc.piece = board[fromY][fromX];
 	}
-	if (board[x][y] == 'k' || board[y][x] == 'K') {
+	if (board[y][x] == 'k' || board[y][x] == 'K') {
 		loc.kingtreat = true;
 	}
 
@@ -108,10 +111,10 @@ void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char sid
 					valid = isvalid(tempX, tempY);
 					if (valid) { square = board[tempY][tempX]; } // må teste om tempy og tempx er utenfor
 				}
-				if (islower(square) && side == 'W' && isupper(board[y][x])) { // error free code since 1981
+				if (islower(square) && side == 'W' && isupper(board[y][x]) && square != 'k') { // error free code since 1981
 					addloc(tempX, tempY, x, y); // taking a black piece as white
 				}
-				if (isupper(square) && side == 'B' && islower(board[y][x])) {
+				if (isupper(square) && side == 'B' && islower(board[y][x]) && square != 'K') { // no taking of king
 					addloc(tempX, tempY, x, y); // taking a white piece as black
 				}
 			}
@@ -246,6 +249,9 @@ int chessboard::eval(char side, int evalPoss) {
 int chessboard::retBest(char side) {
 	int minmax = 0;
 	int index = 0;
+
+	if (side == 'W') minmax = INT_MIN;
+	else minmax = INT_MAX;
 	for (auto i = possible.begin(); i != possible.end(); i++) {
 		if (side == 'W') {
 			minmax = ((*i).ev >= minmax) ? (*i).ev : minmax;
@@ -281,59 +287,81 @@ void chessboard::printBestMove() {
 }
 int chessboard::callPossible(int depth){ // populates this class boards, and the moves with EV
 	chessboard* moveBoard;
+	chessboard* tempBoard;
+	bool kingtreat = false;
+	bool mate = false;
+	char side;
 	int d = depth - 1;
 	for (auto i = possible.begin(); i != possible.end(); i++) {
-		moveBoard = new chessboard(board);
+		moveBoard = new chessboard(board); tempBoard = new chessboard(board);
 		moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
-		moveBoard->possibleMoves(((islower((*i).piece)) ? 'W' : 'B'));
-		if (d == 0) {
-			(*i).ev = moveBoard->eval(((isupper((*i).piece)) ? 'W' : 'B'), possible.size());
+		tempBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
+		
+		side = ((islower((*i).piece)) ? 'W' : 'B');
+		
+		kingtreat = tempBoard->checktest(side);
+		if (!kingtreat) { // normal
+			moveBoard->possibleMoves(side);
 		}
-		else {
-			moveBoard->callPossible(d);
-			(*i).ev = moveBoard->retBest((( islower((*i).piece) ) ? 'W' : 'B'));
+		else {// has a check
+			mate = moveBoard->checkstop(side);
+			cout << "check" << endl;
+			if (mate) {
+				cout << "mate" << endl;
+				if (d == 0) {
+					(*i).ev = MATEVALUE + ((DEPTH - d) * 2);
+				}
+				else {
+					(*i).ev = INT_MAX;
+				}
+				(*i).ev *= (islower((*i).piece)) ? -1 : 1;
+			}
 		}
-		if (((*i).ev > bestmove.ev) && isupper((*i).piece)) bestmove = (*i); // compensates for which player turn it is
-		if (((*i).ev < bestmove.ev) && islower((*i).piece)) bestmove = (*i);
+		if (!mate) {
+			if (d == 0) {
+				(*i).ev = moveBoard->eval(side, possible.size());
+			}
+			else {
+				moveBoard->callPossible(d);
+				(*i).ev = moveBoard->retBest(side);
+			}
+		}
+
+		if (((*i).ev > bestmove.ev) && side == 'W') bestmove = (*i); // compensates for which player turn it is
+		else if (((*i).ev < bestmove.ev) && side == 'B') bestmove = (*i);
 	}
 	return 1;
 }
-bool chessboard::checkstop(char side){
+bool chessboard::checktest(char side) {
 	bool kingtreat = false;
-	
-	
-	possibleMoves((side == 'W') ? 'B' : 'W');
-	blackpossible = possible;
+
 	possible.clear();
-	for (auto b = blackpossible.begin(); b != blackpossible.end(); b++) {
+	possibleMoves((side == 'W') ? 'B' : 'W');
+	for (auto b = possible.begin(); b != possible.end(); b++) {
 		if (board[(*b).y][(*b).x] == 'k' || board[(*b).y][(*b).x] == 'K') {
 			kingtreat = true;
 			break;
 		}
 	}
+	possible.clear();
 
-	if (kingtreat) {
-		possibleMoves(side);
-		for (auto i = possible.begin(); i != possible.end(); i++) {
-			for (auto b = blackpossible.begin(); b != blackpossible.end(); b++) {
-				
-				
-				if ((*i).piece == 'k' || (*i).piece == 'K') { // hvis konge flytter til en plass som er truet av svart så slett trekket.
-					if ((*i).x == (*b).x && (*i).y == (*b).y) {
-						possible.erase(i);
-						break;
-					}
-				}
-				else { // hvis kongen fortsatt er truet så slett trekket
-					if()
-				}
-			}
-		}
-		printpossible();
-		printboard();
-	}
-	blackpossible.clear();
 	return kingtreat;
+}
+bool chessboard::checkstop(char side){
+	chessboard* boardPtr;
+	possibleMoves(side);
+	auto i = possible.begin();
+	while(i != possible.end()){
+		boardPtr = new chessboard(board);
+		boardPtr->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
+		if (boardPtr->checktest(side)) { // hardly optimal
+			possible.erase(i++);
+		}
+		else {
+			++i;
+		}
+	}
+	return possible.empty();
 }
 char startboard[8][8] = { {'R','N','B','K','Q','B','N','R'},
 						  {'P','P','P','P','P','P','P','P'},
@@ -355,8 +383,8 @@ char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'},
 int main() {
 	chessboard board(testboard);
 
-	board.possibleMoves('W');
-	board.callPossible(2);
+	board.possibleMoves('B');
+	board.callPossible(DEPTH);
 	board.printboard();
 	board.printBest();
 	board.printBestMove();
