@@ -15,7 +15,8 @@ class node(){
 }
 */
 const int MATEVALUE = 300;
-const int DEPTH = 3;
+const int DEPTH = 2;
+bool normalflow = false;
 struct move {
 	int x, y, fromY, fromX;
 	char piece;
@@ -40,7 +41,7 @@ public:
 	void printboard(); // prints the board
 	void addloc(int x, int y, int fromX, int fromY, char piece = 'x'); // adds a board location to possible
 	bool isvalid(int x, int y); // move is inside the board
-	void repeat(int piecesquares[][2], int size, int x, int y, char side); // repeat testing of moves
+	void repeat(int piecesquares[][2], int size, int x, int y, char side, bool loop = true); // repeat testing of moves
 	void possibleMoves(char side); // fill possible list with possible moves
 	void move(char piece, int x, int y); // move a piece
 	void move(char piece, int x, int y, int fromX, int fromY); // move a piece
@@ -74,13 +75,21 @@ void chessboard::printboard() {
 void chessboard::addloc(int x, int y, int fromX, int fromY, char piece) {
 	char pieces[4] = { 'q','b','n','r'};
 	bool kingtrett = false;
+	char square = '0';
 	char side = isupper(board[fromY][fromX])? 'W' : 'B';
 	chessboard* tempboard = new chessboard(board);
 
 	// check if the move causes self-check
-	//tempboard->move(board[fromY][fromX], x, y, fromX, fromY);
-	//kingtrett = tempboard->checktest(side);
+	//if (normalflow) {
+	//	square = board[y][x];
+	//	move(board[fromY][fromX], x, y, fromX, fromY);
 
+	//	kingtrett = checktest(side);
+
+	//	move(board[y][x], fromX, fromY, x, y); // undoes move. does not work if taking a piece
+	//	board[y][x] = square;
+	//}
+	
 	if (kingtrett == false) { // illegal move if self-check
 		loc.x = x; loc.y = y;
 
@@ -111,7 +120,7 @@ void chessboard::addloc(int x, int y, int fromX, int fromY, char piece) {
 bool chessboard::isvalid(int x, int y) {
 	return (y >= 0 && y < 8 && x >= 0 && x < 8);
 }
-void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char side) {
+void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char side, bool loop) {
 	int tempY, tempX;
 	bool valid;
 	bool rightSide = (islower(board[y][x]) && side == 'B') || (isupper(board[y][x]) && side == 'W');
@@ -122,11 +131,11 @@ void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char sid
 			valid = isvalid(tempX, tempY);
 			if (valid) {
 				square = board[tempY][tempX];
-				while (square == '0' && valid) {
+				while (square == '0' && valid) { // should not loop a horse, does it now.
 					addloc(tempX, tempY, x, y);
 					tempY += piecesquares[i][0]; tempX += piecesquares[i][1];
 					valid = isvalid(tempX, tempY);
-					if (valid) { square = board[tempY][tempX]; } // må teste om tempy og tempx er utenfor
+					if (valid) { square = board[tempY][tempX]; valid = loop && valid; } // må teste om tempy og tempx er utenfor
 				}
 				if (islower(square) && side == 'W' && isupper(board[y][x]) && square != 'k') { // error free code since 1981
 					addloc(tempX, tempY, x, y); // taking a black piece as white
@@ -143,7 +152,7 @@ void chessboard::possibleMoves(char side) {
 	int kingsquares[8][2] = { {1,-1} ,{1,0} ,{1,1} ,{0,1} ,{-1,-1} ,{-1,0} ,{-1,-1} ,{0,-1} };
 	int bishopsquares[4][2] = { {1,-1}, {1, 1}, {-1,1}, {-1, -1} };
 	int rooksquares[4][2] = { {1,0}, {-1,0}, {0,1}, {0,-1}};
-	int pawnsquares[2][2] = { {1,-1}, {1,1} }; // POTENTIAL REFACTORING
+	int pawnsquares[2][2] = { {1,-1}, {1,1} };
 	char square = '0';
 	int offset = 0;
 	int pawnstart = 0;
@@ -152,23 +161,7 @@ void chessboard::possibleMoves(char side) {
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
 			if (board[y][x] != '0') {
-				//if (isupper(board[y][x]) && side == 'W') { // hvit
-				//	if (board[y][x] == 'P') { // hvit bonde
-				//		if (board[y + 1][x] == '0') { // bonde 1 fram
-				//			addloc(x, y + 1, x, y);
-				//			if (y == 1 && board[y + 2][x] == '0') { // bonde 2 fram
-				//				addloc(x, y + 2, x, y);
-				//			}
-				//		}
-				//		if (islower(board[y + 1][x + 1]) && board[y + 1][x + 1] != 'k' && isvalid(x + 1, y + 1)) {
-				//			addloc(x + 1, y + 1, x, y);
-				//		}
-				//		if (islower(board[y + 1][x - 1]) && board[y + 1][x - 1] != 'k' && isvalid(x - 1, y + 1)) {
-				//			addloc(x - 1, y + 1, x, y);
-				//		}
-				//	}
-				//}
-				if (board[y][x] == 'p' || board[y][x] == 'P') {
+				if (board[y][x] == 'P' || board[y][x] == 'p') { // 24 - 30
 					offset = (board[y][x] == 'P') ? 1 : -1; // directon pawn moves
 					if ((side == 'W' && offset == 1) || (side == 'B' && offset == -1)) {
 						pawnstart = (offset == 1) ? 1 : 6;
@@ -194,7 +187,7 @@ void chessboard::possibleMoves(char side) {
 					}
 				}
 				if (board[y][x] == 'N' || board[y][x] == 'n') { // knight moves the same way independent of side
-					repeat(knightsquares, 8, x, y, side);
+					repeat(knightsquares, 8, x, y, side, false);
 				}
 				if (board[y][x] == 'B' || board[y][x] == 'b') {
 					repeat(bishopsquares, 4, x, y, side);
@@ -206,41 +199,9 @@ void chessboard::possibleMoves(char side) {
 					repeat(rooksquares, 4, x, y, side);
 					repeat(bishopsquares, 4, x, y, side);
 				}
-				if (board[y][x] == 'k' || board[y][x] == 'K') { // knight moves the same way independent of side
-					for (int i = 0; i < 8; i++) {
-						tempY = y + kingsquares[i][0]; tempX = x + kingsquares[i][1];
-						if (tempY >= 0 && tempY < 8 && tempX >= 0 && tempX < 8) {
-							square = board[tempY][tempX];
-							if ((square == '0' || islower(square)) && side == 'W' && isupper(board[y][x]) && board[tempY][tempX] != 'k') {
-								addloc(tempX, tempY, x, y);
-							}
-							if ((square == '0' || isupper(square)) && side == 'B' && islower(board[y][x]) && board[tempY][tempX] != 'K') {
-								addloc(tempX, tempY, x, y);
-							}
-						}
-					}
+				if (board[y][x] == 'K' || board[y][x] == 'k') { // knight moves the same way independent of side
+					repeat(kingsquares, 8, x, y, side, false);
 				}
-
-				//if (islower(board[y][x]) && side == 'B') { // svart
-				//	if (board[y][x] == 'p') {
-				//		if (board[y - 1][x] == '0') { // bonde 1 fram
-				//			addloc(x, y - 1, x, y);
-				//			if (y == 6 && board[y - 2][x] == '0') { // bonde 2 fram
-				//				addloc(x, y - 2, x, y);
-				//			}
-				//		}
-				//		for (int i = 0; i < 2; i++) {
-				//			tempX = x + pawnsquares[i][1];
-				//			tempY = y - pawnsquares[i][0];
-				//			if (isvalid(tempX, tempY)) {
-				//				square = board[tempY][tempX];
-				//				if (isupper(square) && square != 'k') {
-				//					addloc(tempX, tempY, x, y);
-				//				}
-				//			}
-				//		}
-				//	}
-				//}
 			}
 		}
 	}
@@ -386,11 +347,13 @@ int chessboard::callPossible(int depth, char paramSide){ // populates this class
 	}
 	return 1;
 }
-bool chessboard::checktest(char side) {
+bool chessboard::checktest(char side) { // VELDIG ineffektivt much
 	bool kingtreat = false;
-
+	blackpossible = possible;
 	possible.clear();
-	possibleMoves((side == 'W') ? 'B' : 'W'); // 11. 
+	normalflow = false; // stop the program from going really fucking deep..
+	possibleMoves((side == 'W') ? 'B' : 'W');
+	normalflow = true;
 	for (auto b = possible.begin(); b != possible.end(); b++) {
 		if (board[(*b).y][(*b).x] == 'k' || board[(*b).y][(*b).x] == 'K') {
 			kingtreat = true;
@@ -398,6 +361,8 @@ bool chessboard::checktest(char side) {
 		}
 	}
 	possible.clear();
+	possible = blackpossible;
+	blackpossible.clear();
 
 	return kingtreat;
 }
@@ -444,14 +409,13 @@ char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'},
 						  {'k','0','0','0','0','0','0','p'},
 						  {'0','r','0','q','0','r','0','0'} };
 int main() {
-	chessboard board(blackpawn);
+	chessboard board(testboard);
 	char side = 'W';
 	board.possibleMoves(side);
-	board.printpossible();
-	//board.callPossible(DEPTH, side);
-	//board.printboard();
-	//board.printBest();
-	//board.printBestMove();
+	board.callPossible(DEPTH, side);
+	board.printboard();
+	board.printBest();
+	board.printBestMove();
 	cout << "finished" << endl;
 
 }
