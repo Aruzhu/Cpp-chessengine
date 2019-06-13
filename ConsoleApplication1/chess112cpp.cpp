@@ -38,7 +38,7 @@ class chessboard {
 public:
 	chessboard(char b[][8]);
 	void printboard(); // prints the board
-	void addloc(int x, int y, int fromX, int fromY, bool kingtrett = false); // adds a board location to possible
+	void addloc(int x, int y, int fromX, int fromY, char piece = 'x'); // adds a board location to possible
 	bool isvalid(int x, int y); // move is inside the board
 	void repeat(int piecesquares[][2], int size, int x, int y, char side); // repeat testing of moves
 	void possibleMoves(char side); // fill possible list with possible moves
@@ -71,21 +71,41 @@ void chessboard::printboard() {
 	}
 	cout << endl;
 }
-void chessboard::addloc(int x, int y, int fromX, int fromY, bool kingtrett) {
-	loc.x = x; loc.y = y;
-	if (board[fromY][fromX] == 'p' && fromY == 1 && y == 0 && board[y][x] == '0') { // autoqueen mofo
-		loc.piece = 'q';
-	}
-	else if (board[fromY][fromX] == 'P' && fromY == 6 && y == 7 && board[y][x] == '0'){
-		loc.piece = 'Q';
-	}
-	else {
-		loc.piece = board[fromY][fromX];
-	}
+void chessboard::addloc(int x, int y, int fromX, int fromY, char piece) {
+	char pieces[4] = { 'q','b','n','r'};
+	bool kingtrett = false;
+	chessboard* tempboard = new chessboard(board);
 
-	loc.fromX = fromX;
-	loc.fromY = fromY;
-	possible.push_back(loc);
+	// check if the move causes self-check
+	tempboard->move(board[fromY][fromX], x, y, fromX, fromY);
+	kingtrett = tempboard->checktest((isupper(board[fromY][fromX]))? 'W': 'B');
+
+	if (kingtrett == false) { // illegal move if self-check
+		loc.x = x; loc.y = y;
+
+		if (board[fromY][fromX] == 'p' && fromY == 1 && y == 0 && board[y][x] == '0') { // pawn turns to new piece
+			for (int i = 0; i < 4; i++) {
+				addloc(x, y, fromX, fromY, pieces[i]);
+			}
+		}
+		else if (board[fromY][fromX] == 'P' && fromY == 6 && y == 7 && board[y][x] == '0') {
+			for (int i = 0; i < 4; i++) {
+				addloc(x, y, fromX, fromY, toupper(pieces[i]));
+			}
+		}
+		else {
+			if (piece == 'x') {
+				loc.piece = board[fromY][fromX];
+			}
+			else {
+				loc.piece = piece;
+			}
+		}
+
+		loc.fromX = fromX;
+		loc.fromY = fromY;
+		possible.push_back(loc);
+	}
 }
 bool chessboard::isvalid(int x, int y) {
 	return (y >= 0 && y < 8 && x >= 0 && x < 8);
