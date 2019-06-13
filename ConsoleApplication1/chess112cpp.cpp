@@ -15,8 +15,9 @@ class node(){
 }
 */
 const int MATEVALUE = 300;
-const int DEPTH = 2;
+const int DEPTH = 3;
 bool normalflow = false;
+
 struct move {
 	int x, y, fromY, fromX;
 	char piece;
@@ -137,10 +138,10 @@ void chessboard::repeat(int piecesquares[][2] ,int size,  int x, int y, char sid
 					valid = isvalid(tempX, tempY);
 					if (valid) { square = board[tempY][tempX]; valid = loop && valid; } // må teste om tempy og tempx er utenfor
 				}
-				if (islower(square) && side == 'W' && isupper(board[y][x]) && square != 'k') { // error free code since 1981
+				if (islower(square) && side == 'W' && isupper(board[y][x])) { // add:  && square != 'k'
 					addloc(tempX, tempY, x, y); // taking a black piece as white
 				}
-				if (isupper(square) && side == 'B' && islower(board[y][x]) && square != 'K') { // no taking of king
+				if (isupper(square) && side == 'B' && islower(board[y][x])) { // add:  && square != 'K'
 					addloc(tempX, tempY, x, y); // taking a white piece as black
 				}
 			}
@@ -238,8 +239,8 @@ int chessboard::eval(char side, int evalPoss) {
 	char pieces[6] = { 'k','q','b','n','r', 'p' };
 	//char count[6] = { 0,0,0,0,0,0 };
 	int value[6] = { 200, 10, 3, 3, 5, 1 };
-	int blackev = ((side == 'W')? 0.1*evalPoss : 0.1*possible.size());
-	int whiteev = ((side == 'B')? 0.1*evalPoss : 0.1*possible.size());
+	int blackev = ((side == 'W')? 0.3*evalPoss : 0.3*possible.size());
+	int whiteev = ((side == 'B')? 0.3*evalPoss : 0.3*possible.size());
 	int ev;
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
@@ -320,7 +321,6 @@ int chessboard::callPossible(int depth, char paramSide){ // populates this class
 		}
 		else {// has a check
 			mate = moveBoard->checkstop(side);
-			cout << "check" << endl;
 			if (mate) {
 				cout << "mate" << endl;
 				if (d == 0) {
@@ -355,7 +355,7 @@ bool chessboard::checktest(char side) { // VELDIG ineffektivt much
 	possibleMoves((side == 'W') ? 'B' : 'W');
 	normalflow = true;
 	for (auto b = possible.begin(); b != possible.end(); b++) {
-		if (board[(*b).y][(*b).x] == 'k' || board[(*b).y][(*b).x] == 'K') {
+		if (board[(*b).y][(*b).x] == 'k' || board[(*b).y][(*b).x] == 'K') { // pålegger at repeat ikke bruker square != 'k'
 			kingtreat = true;
 			break;
 		}
@@ -400,7 +400,7 @@ char blackpawn[8][8] = {  {'0','0','0','0','0','0','0','0'},
 						  {'0','0','0','0','0','0','0','0'},
 						  {'0','0','0','0','0','0','0','0'} };
 
-char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'},
+char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'}, // W best: R 4,4
 						  {'0','P','0','0','0','P','n','P'},
 						  {'Q','0','0','0','R','0','0','0'},
 						  {'0','0','0','P','0','0','0','0'},
