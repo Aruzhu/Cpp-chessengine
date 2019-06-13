@@ -74,11 +74,12 @@ void chessboard::printboard() {
 void chessboard::addloc(int x, int y, int fromX, int fromY, char piece) {
 	char pieces[4] = { 'q','b','n','r'};
 	bool kingtrett = false;
+	char side = isupper(board[fromY][fromX])? 'W' : 'B';
 	chessboard* tempboard = new chessboard(board);
 
 	// check if the move causes self-check
-	tempboard->move(board[fromY][fromX], x, y, fromX, fromY);
-	kingtrett = tempboard->checktest((isupper(board[fromY][fromX]))? 'W': 'B');
+	//tempboard->move(board[fromY][fromX], x, y, fromX, fromY);
+	//kingtrett = tempboard->checktest(side);
 
 	if (kingtrett == false) { // illegal move if self-check
 		loc.x = x; loc.y = y;
@@ -144,69 +145,102 @@ void chessboard::possibleMoves(char side) {
 	int rooksquares[4][2] = { {1,0}, {-1,0}, {0,1}, {0,-1}};
 	int pawnsquares[2][2] = { {1,-1}, {1,1} }; // POTENTIAL REFACTORING
 	char square = '0';
+	int offset = 0;
+	int pawnstart = 0;
 	int tempX, tempY;
 	bool valid = false;
 	for (int y = 0; y < 8; y++) {
 		for (int x = 0; x < 8; x++) {
-			if (isupper(board[y][x]) && side == 'W') { // hvit
-				if (board[y][x] == 'P') { // hvit bonde
-					if (board[y + 1][x] == '0') { // bonde 1 fram
-						addloc(x, y + 1, x, y);
-						if (y == 1 && board[y + 2][x] == '0') { // bonde 2 fram
-							addloc(x, y + 2, x, y);
+			if (board[y][x] != '0') {
+				//if (isupper(board[y][x]) && side == 'W') { // hvit
+				//	if (board[y][x] == 'P') { // hvit bonde
+				//		if (board[y + 1][x] == '0') { // bonde 1 fram
+				//			addloc(x, y + 1, x, y);
+				//			if (y == 1 && board[y + 2][x] == '0') { // bonde 2 fram
+				//				addloc(x, y + 2, x, y);
+				//			}
+				//		}
+				//		if (islower(board[y + 1][x + 1]) && board[y + 1][x + 1] != 'k' && isvalid(x + 1, y + 1)) {
+				//			addloc(x + 1, y + 1, x, y);
+				//		}
+				//		if (islower(board[y + 1][x - 1]) && board[y + 1][x - 1] != 'k' && isvalid(x - 1, y + 1)) {
+				//			addloc(x - 1, y + 1, x, y);
+				//		}
+				//	}
+				//}
+				if (board[y][x] == 'p' || board[y][x] == 'P') {
+					offset = (board[y][x] == 'P') ? 1 : -1; // directon pawn moves
+					if ((side == 'W' && offset == 1) || (side == 'B' && offset == -1)) {
+						pawnstart = (offset == 1) ? 1 : 6;
+						if (board[y + offset][x] == '0') {
+							addloc(x, y + offset, x, y);
+							if (y == pawnstart && board[y + 2 * offset][x] == '0') {
+								addloc(x, y + 2 * offset, x, y);
+							}
 						}
-					}
-					if (islower(board[y + 1][x + 1]) && board[y + 1][x + 1] != 'k' && isvalid(x+1, y+1)) {
-						addloc(x + 1, y + 1, x, y);
-					}
-					if (islower(board[y + 1][x - 1]) && board[y + 1][x + 1] != 'k' && isvalid(x-1, y+1)) {
-						addloc(x - 1, y + 1, x, y);
+						for (int i = 0; i < 2; i++) {
+							tempX = x + pawnsquares[i][1];
+							tempY = y + offset * pawnsquares[i][0];
+							if (isvalid(tempX, tempY)) {
+								square = board[tempY][tempX];
+								if (isupper(square) && square != 'k' && offset == -1) {
+									addloc(tempX, tempY, x, y);
+								}
+								if (islower(square) && square != 'k' && offset == 1) {
+									addloc(tempX, tempY, x, y);
+								}
+							}
+						}
 					}
 				}
-			}
-			if (board[y][x] == 'N' || board[y][x] == 'n') { // knight moves the same way independent of side
-				repeat(knightsquares, 8, x, y, side);
-			}
-			if (board[y][x] == 'B' || board[y][x] == 'b') {
-				repeat(bishopsquares, 4, x, y, side);
-			}
-			if (board[y][x] == 'R' || board[y][x] == 'r') {
-				repeat(rooksquares, 4, x, y, side);
-			}
-			if (board[y][x] == 'Q' || board[y][x] == 'q') {
-				repeat(rooksquares, 4, x, y, side);
-				repeat(bishopsquares, 4, x, y, side);
-			}
-			if (board[y][x] == 'k' || board[y][x] == 'K') { // knight moves the same way independent of side
-				for (int i = 0; i < 8; i++) {
-					tempY = y + kingsquares[i][0]; tempX = x + kingsquares[i][1];
-					if (tempY >= 0 && tempY < 8 && tempX >= 0 && tempX < 8) {
-						square = board[tempY][tempX];
-						if ((square == '0' || islower(square)) && side == 'W' && isupper(board[y][x]) && board[tempY][tempX] != 'k') {
-							addloc(tempX, tempY, x, y);
-						}
-						if ((square == '0' || isupper(square)) && side == 'B' && islower(board[y][x]) && board[tempY][tempX] != 'K') {
-							addloc(tempX, tempY, x, y);
+				if (board[y][x] == 'N' || board[y][x] == 'n') { // knight moves the same way independent of side
+					repeat(knightsquares, 8, x, y, side);
+				}
+				if (board[y][x] == 'B' || board[y][x] == 'b') {
+					repeat(bishopsquares, 4, x, y, side);
+				}
+				if (board[y][x] == 'R' || board[y][x] == 'r') {
+					repeat(rooksquares, 4, x, y, side);
+				}
+				if (board[y][x] == 'Q' || board[y][x] == 'q') {
+					repeat(rooksquares, 4, x, y, side);
+					repeat(bishopsquares, 4, x, y, side);
+				}
+				if (board[y][x] == 'k' || board[y][x] == 'K') { // knight moves the same way independent of side
+					for (int i = 0; i < 8; i++) {
+						tempY = y + kingsquares[i][0]; tempX = x + kingsquares[i][1];
+						if (tempY >= 0 && tempY < 8 && tempX >= 0 && tempX < 8) {
+							square = board[tempY][tempX];
+							if ((square == '0' || islower(square)) && side == 'W' && isupper(board[y][x]) && board[tempY][tempX] != 'k') {
+								addloc(tempX, tempY, x, y);
+							}
+							if ((square == '0' || isupper(square)) && side == 'B' && islower(board[y][x]) && board[tempY][tempX] != 'K') {
+								addloc(tempX, tempY, x, y);
+							}
 						}
 					}
 				}
-			}
-			
-			if (islower(board[y][x]) && side == 'B') { // svart
-				if (board[y][x] == 'p') {
-					if (board[y - 1][x] == '0') { // bonde 1 fram
-						addloc(x, y-1, x, y);
-						if (y == 6 && board[y - 2][x] == '0') { // bonde 2 fram
-							addloc(x, y-2, x, y);
-						}
-					}
-					if (isupper(board[y - 1][x + 1]) && board[y - 1][x + 1] != 'k'  && isvalid(x + 1, y - 1)) {
-						addloc(x + 1, y - 1, x, y);
-					}
-					if (isupper(board[y - 1][x - 1]) && board[y - 1][x - 1] != 'k'  && isvalid(x - 1, y - 1)) {
-						addloc(x - 1, y - 1, x, y);
-					}
-				}
+
+				//if (islower(board[y][x]) && side == 'B') { // svart
+				//	if (board[y][x] == 'p') {
+				//		if (board[y - 1][x] == '0') { // bonde 1 fram
+				//			addloc(x, y - 1, x, y);
+				//			if (y == 6 && board[y - 2][x] == '0') { // bonde 2 fram
+				//				addloc(x, y - 2, x, y);
+				//			}
+				//		}
+				//		for (int i = 0; i < 2; i++) {
+				//			tempX = x + pawnsquares[i][1];
+				//			tempY = y - pawnsquares[i][0];
+				//			if (isvalid(tempX, tempY)) {
+				//				square = board[tempY][tempX];
+				//				if (isupper(square) && square != 'k') {
+				//					addloc(tempX, tempY, x, y);
+				//				}
+				//			}
+				//		}
+				//	}
+				//}
 			}
 		}
 	}
@@ -356,7 +390,7 @@ bool chessboard::checktest(char side) {
 	bool kingtreat = false;
 
 	possible.clear();
-	possibleMoves((side == 'W') ? 'B' : 'W');
+	possibleMoves((side == 'W') ? 'B' : 'W'); // 11. 
 	for (auto b = possible.begin(); b != possible.end(); b++) {
 		if (board[(*b).y][(*b).x] == 'k' || board[(*b).y][(*b).x] == 'K') {
 			kingtreat = true;
@@ -392,6 +426,15 @@ char startboard[8][8] = { {'R','N','B','K','Q','B','N','R'},
 					      {'p','p','p','p','p','p','p','p'},
 					      {'r','n','b','q','k','b','n','r'} };
 
+char blackpawn[8][8] = {  {'0','0','0','0','0','0','0','0'},
+						  {'0','0','0','0','0','0','0','0'},
+						  {'0','0','0','0','0','0','0','0'},
+						  {'0','0','0','0','P','0','0','0'},
+						  {'0','0','0','r','0','0','0','0'},
+						  {'0','0','0','0','0','0','0','0'},
+						  {'0','0','0','0','0','0','0','0'},
+						  {'0','0','0','0','0','0','0','0'} };
+
 char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'},
 						  {'0','P','0','0','0','P','n','P'},
 						  {'Q','0','0','0','R','0','0','0'},
@@ -401,13 +444,14 @@ char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'},
 						  {'k','0','0','0','0','0','0','p'},
 						  {'0','r','0','q','0','r','0','0'} };
 int main() {
-	chessboard board(testboard);
+	chessboard board(blackpawn);
 	char side = 'W';
 	board.possibleMoves(side);
-	board.callPossible(DEPTH, side);
-	board.printboard();
-	board.printBest();
-	board.printBestMove();
+	board.printpossible();
+	//board.callPossible(DEPTH, side);
+	//board.printboard();
+	//board.printBest();
+	//board.printBestMove();
 	cout << "finished" << endl;
 
 }
