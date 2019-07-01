@@ -6,7 +6,6 @@ using namespace std;
 // se trekkene som var beste
 // notajon input fra spiller
 // forskjell på ulik spill stadie i ev. åpning er shit..
-// setter seg fortsatt selv i sjakk
 // eval som underklasse (protected)
 // eval endrer seg selv.. AI!?
 // http://www.frayn.net/beowulf/theory.html
@@ -14,7 +13,7 @@ using namespace std;
 const int MATEVALUE = 300;
 const int DEPTH = 3;
 const int MOBILITY = 0;
-const int PIECESQUARE = 2;
+const int PIECESQUARE = 0;
 bool normalflow = false;
 int pronecount = 0;
 int hits = 0;
@@ -23,7 +22,7 @@ struct chessmove {
 	int x, y, fromY, fromX;
 	char piece;
 	float ev;
-	bool kingtreat = false;
+	chessboard* ptr;
 	bool operator<(const chessmove & a);
 	bool operator==(const chessmove& a);
 };
@@ -45,7 +44,7 @@ public:
 	chessboard(char b[][8], char Ab[][8]);
 	void printboard(); // prints the board
 	void addloc(int x, int y, int fromX, int fromY, char piece = 'x'); // adds a board location to possible
-	void updateAboard(int x, int y, char side);
+	void updateAboard(int x, int y, char side, char newSQ = 'X');
 	bool isvalid(int x, int y, int fromX, int fromY); // move is inside the board
 	void repeat(int piecesquares[][2], int size, int x, int y, char side, bool loop = true); // repeat testing of moves
 	void possibleMoves(char side); // fill possible list with possible moves
@@ -54,7 +53,7 @@ public:
 	void printpossible(); // print all possible moves
 	float eval(char side, int evalPoss); // get evaluation of current possistion
 	float retBest(char side); // do minimax on the possible moves
-	void getBest(float value = -1000); // print all moves with evaluation
+	void getBest(float value, chessboard* bPtr = nullptr); // print all moves with evaluation
 	void printBest();
 	void printBestMove(); // print the best move
 	int callPossible(int depth, char paramSide, int alfa); // engine
@@ -123,12 +122,13 @@ void chessboard::addloc(int x, int y, int fromX, int fromY, char piece) {
 	loc.fromY = fromY;
 	possible.push_back(loc);
 }
-void chessboard::updateAboard(int x, int y, char side) {
+void chessboard::updateAboard(int x, int y, char side, char newSQ) {
 	if (Aboard[y][x] == ((side == 'W') ? 'B' : 'W')) {
-		Aboard[y][x] = 'X';
+		Aboard[y][x] = newSQ;
 	}
 	else {
-		Aboard[y][x] = side;
+		if (Aboard[y][x] == side) Aboard[y][x] = 'X';
+		else Aboard[y][x] = side;
 	}
 }
 bool chessboard::isvalid(int x, int y, int fromX, int fromY) {
@@ -263,6 +263,7 @@ void chessboard::move(char piece, int x, int y){
 void chessboard::move(char piece, int x, int y, int fromX, int fromY) {
 	board[fromY][fromX] = '0';
 	board[y][x] = piece;
+	updateAboard(x, y, (isupper(piece)) ? 'B' : 'W', '0'); // empty aboard when piece moves
 }
 
 void chessboard::printpossible(){
@@ -396,10 +397,11 @@ float chessboard::retBest(char side) {
 	}
 	return minmax;
 }
-void chessboard::getBest(float value) {
+void chessboard::getBest(float value, chessboard* bPtr) {
 	for (auto i = possible.begin(); i != possible.end(); i++) {
 		if (value == (*i).ev) {
 			bestmove = (*i);
+			bestmove.ptr = bPtr;
 		}
 	}
 }
@@ -431,6 +433,7 @@ bool chessmove::operator==(const chessmove & a)
 }
 int chessboard::callPossible(int depth, char paramSide, int alfa){ // populates this class boards, and the moves with EV
 	chessboard* moveBoard;
+	chessboard* checkBoard;
 	bool mate = false;
 	char side;
 	int d = depth - 1;
@@ -442,46 +445,52 @@ int chessboard::callPossible(int depth, char paramSide, int alfa){ // populates 
 	
 	for (auto i = possible.begin(); i != possible.end(); i++) {
 		moveBoard = new chessboard(board, Aboard);
-		moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
-		
-		side = ((islower((*i).piece)) ? 'W' : 'B'); // father node
+		checkBoard = new chessboard(board, Aboard);
 
-		if(moveBoard->checktest(side)){ // am i in check?
-			mate = moveBoard->checkstop(side);
-			if (mate) {
-				(*i).ev = MATEVALUE*((side == 'B')? -1 : 1);
+		if (tolower(board[(*i).y][(*i).x]) != 'k') { // never actually take the king
+			moveBoard->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
+			side = ((islower((*i).piece)) ? 'W' : 'B'); // father node
+
+			*checkBoard = *moveBoard;
+			if (checkBoard->checktest(side)) { // am i in check?
+				mate = moveBoard->checkstop(side);
+				if (mate) {
+					(*i).ev = MATEVALUE * ((side == 'B') ? -1 : 1);
+				}
 			}
-		}
-		else {
-			moveBoard->possibleMoves(side);
-		}
-		if (!mate) { // normal way
-			if (d == 0) {
-				(*i).ev += moveBoard->eval(side, possible.size());
+			else{
+				moveBoard->possibleMoves(side);
 			}
-			else {
-				moveBoard->callPossible(d, side, alfa);
-				(*i).ev += moveBoard->retBest(side); // W = minst mulig ev B = høyst mulig ev
-				alfa = (*i).ev;
+			if (!mate) { // normal way
+				if (d == 0) {
+					(*i).ev = moveBoard->eval(side, possible.size());
+				}
+				else {
+					moveBoard->callPossible(d, side, alfa);
+					(*i).ev = moveBoard->retBest(side); // W = minst mulig ev B = høyst mulig ev
+					//moveBoard->getBest((*i).ev); needs to store best move somehow.. boardptr of best move is lost..
+					alfa = (*i).ev;
+				}
 			}
+			if ((*i).ev < alfa && side == 'W') { // når hvit = svart possible, minst mulig ev.
+				pronecount += 1;
+				break;
+			}
+			if ((*i).ev > alfa && side == 'B') { // når svart = hvit possible, høyst ev.
+				pronecount += 1;
+				break;
+			}
+			hits += 1;
 		}
-		if ((*i).ev < alfa && side == 'W'){ // når hvit = svart possible, minst mulig ev.
-			pronecount += 1;
-			break;
-		}
-		if ((*i).ev > alfa && side == 'B') { // når svart = hvit possible, høyst ev.
-			pronecount += 1;
-			break;
-		}
-		hits += 1;
 	}
 	return 1;
 }
 bool chessboard::checktest(char side) { // VELDIG ineffektivt much
 	bool kingtreat = false; // 5ms
+
 	temppossible = possible;
 	possible.clear();
-	possibleMoves(side);
+	possibleMoves( ((side == 'W')? 'B' : 'W'));
 	for (auto b = possible.begin(); b != possible.end(); b++) {
 		if (board[(*b).y][(*b).x] == 'k' || board[(*b).y][(*b).x] == 'K') { // pålegger at repeat ikke bruker square != 'k'
 			kingtreat = true;
@@ -497,12 +506,13 @@ bool chessboard::checktest(char side) { // VELDIG ineffektivt much
 bool chessboard::checkstop(char side){
 	chessboard* boardPtr;
 	possible.clear();
-	possibleMoves((side == 'W')? 'B': 'W');
+	possibleMoves(side);
+	possible.unique();
 	auto i = possible.begin();
 	while(i != possible.end()){
 		boardPtr = new chessboard(board);
 		boardPtr->move((*i).piece, (*i).x, (*i).y, (*i).fromX, (*i).fromY);
-		if (boardPtr->checktest(side)) { // hardly optimal
+		if (boardPtr->checktest(side)) {
 			possible.erase(i++);
 		}
 		else {
@@ -554,7 +564,7 @@ char testboard[8][8] = {  {'0','0','0','0','0','0','K','0'}, // W best: R 4,4
 						  {'Q','0','0','0','R','0','0','0'},
 						  {'0','0','0','P','0','0','0','0'},
 						  {'0','0','0','0','0','0','0','0'},
-						  {'p','p','b','N','p','0','p','0'},
+						  {'p','p','b','N','0','0','p','0'},
 						  {'k','0','0','0','0','0','0','p'},
 						  {'0','r','0','q','0','r','0','0'} };
 int main() {
@@ -563,7 +573,6 @@ int main() {
 
 	board.possibleMoves( ((side == 'W') ? 'B' : 'W') ); // fill attackboard (Aboard)
 	board.posClear(); // clear possibleMoves
-	board.Aclear('W');
 
 	int movecount = 0;
 	while (true) {
@@ -574,6 +583,7 @@ int main() {
 		board.getBest(board.retBest( ((side == 'W')? 'B': 'W')  )); // get bestmove
 		board.printBestMove(); // print bestmove
 		board.doBestMove(); // do the best move
+		board.printBest();
 		board.printboard(); // print the board
 		board.posClear(); // clear possible moves
 
